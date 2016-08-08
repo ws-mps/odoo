@@ -4336,7 +4336,7 @@ class BaseModel(object):
         # invalidate and mark new-style fields to recompute; do this before
         # setting other fields, because it can require the value of computed
         # fields, e.g., a one2many checking constraints on records
-        recs.modified(self._fields)
+        recs.modified(vals)
 
         # call the 'set' method of fields which are not classic_write
         upd_todo.sort(lambda x, y: self._columns[x].priority-self._columns[y].priority)
