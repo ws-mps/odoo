@@ -894,6 +894,10 @@ class BaseModel(object):
         if ids and self._context.get('defer_parent_store_computation'):
             self._parent_store_compute()
 
+        if ids and self._context.get('validate_only'):
+            cr.execute('ROLLBACK TO SAVEPOINT model_load')
+            ids = False
+
         return {'ids': ids, 'messages': messages}
 
     def _add_fake_fields(self, fields):
