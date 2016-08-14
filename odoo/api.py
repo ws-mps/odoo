@@ -735,6 +735,7 @@ class Environment(Mapping):
         self.cache = defaultdict(dict)              # {field: {id: value, ...}, ...}
         self._protected = defaultdict(frozenset)    # {field: ids, ...}
         self.dirty = defaultdict(set)               # {record: set(field_name), ...}
+        self.thrashing = {}                         # {field: traceback, ...}
         self.all = envs
         envs.add(self)
         return self
