@@ -33,6 +33,7 @@ import time
 from collections import defaultdict, MutableMapping
 from inspect import getmembers, currentframe
 from operator import itemgetter
+import traceback
 
 import babel.dates
 import dateutil.relativedelta
@@ -64,6 +65,8 @@ regex_pg_name = re.compile(r'^[a-z_][a-z0-9_$]*$', re.I)
 onchange_v7 = re.compile(r"^(\w+)\((.*)\)$")
 
 AUTOINIT_RECALCULATE_STORED_FIELDS = 1000
+
+CACHE_THRASH_THRESHOLD = 50
 
 # base environment for doing a safe eval
 SAFE_EVAL_BASE = {
@@ -5779,6 +5782,8 @@ class BaseModel(object):
         prefetch_ids = env.prefetch[self._name]
         prefetch_ids.update(self._ids)
         ids = filter(None, prefetch_ids - set(env.cache[field]))
+        if len(ids) >= CACHE_THRASH_THRESHOLD:
+            env.thrashing[field] = traceback.extract_stack()
         return self.browse(ids)
 
     @api.model
@@ -5808,6 +5813,17 @@ class BaseModel(object):
         # invalidate fields and inverse fields, too
         spec = [(f, ids) for f in fields] + \
                [(invf, None) for f in fields for invf in self._field_inverses[f]]
+
+        # check for cache thrashing
+        if self.env.thrashing:
+            for f, ids in spec:
+                if ids is None and f in self.env.thrashing:
+                    tb = self.env.thrashing.pop(f)
+                    _logger.warning("cache thrashing %s via invalidate_cache(%s, %s)\n" +
+                                    "%s\nLast fetched via:\n%s", f, str(fnames), str(ids),
+                                    "\n".join(traceback.format_stack()),
+                                    "\n".join(traceback.format_list(tb)))
+
         self.env.invalidate(spec)
 
     @api.multi
@@ -5832,6 +5848,16 @@ class BaseModel(object):
         # invalidate non-stored fields.function which are currently cached
         spec += [(f, None) for f in self.pool.pure_function_fields
                  if f in cached_fields]
+
+        # check for cache thrashing
+        if self.env.thrashing:
+            for f, ids in spec:
+                if ids is None and f in self.env.thrashing:
+                    tb = self.env.thrashing.pop(f)
+                    _logger.warning("cache thrashing %s via modified(%s)\n" +
+                                    "%s\nLast fetched via:\n%s", f, str(fnames),
+                                    "\n".join(traceback.format_stack()),
+                                    "\n".join(traceback.format_list(tb)))
 
         self.env.invalidate(spec)
 
