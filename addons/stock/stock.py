@@ -318,7 +318,7 @@ class stock_quant(osv.osv):
 
         'history_ids': fields.many2many('stock.move', 'stock_quant_move_rel', 'quant_id', 'move_id', 'Moves', help='Moves that operate(d) on this quant', copy=False),
         'company_id': fields.many2one('res.company', 'Company', help="The company to which the quants belong", required=True, readonly=True, select=True),
-        'inventory_value': fields.function(_calc_inventory_value, string="Inventory Value", type='float', readonly=True),
+        'inventory_value': fields.function(_calc_inventory_value, string="Inventory Value", type='float', readonly=True, store={'stock.quant': (lambda self, cr, uid, ids, ctx: ids, ['qty'], 10)}),
 
         # Used for negative quants to reconcile after compensated by a new positive one
         'propagated_from_id': fields.many2one('stock.quant', 'Linked Quant', help='The negative quant this is coming from', readonly=True, select=True),
@@ -335,19 +335,6 @@ class stock_quant(osv.osv):
         cr.execute('SELECT indexname FROM pg_indexes WHERE indexname = %s', ('stock_quant_product_location_index',))
         if not cr.fetchone():
             cr.execute('CREATE INDEX stock_quant_product_location_index ON stock_quant (product_id, location_id, company_id, qty, in_date, reservation_id)')
-
-    def read_group(self, cr, uid, domain, fields, groupby, offset=0, limit=None, context=None, orderby=False, lazy=True):
-        ''' Overwrite the read_group in order to sum the function field 'inventory_value' in group by'''
-        res = super(stock_quant, self).read_group(cr, uid, domain, fields, groupby, offset=offset, limit=limit, context=context, orderby=orderby, lazy=lazy)
-        if 'inventory_value' in fields:
-            for line in res:
-                if '__domain' in line:
-                    lines = self.search(cr, uid, line['__domain'], context=context)
-                    inv_value = 0.0
-                    for line2 in self.browse(cr, uid, lines, context=context):
-                        inv_value += line2.inventory_value
-                    line['inventory_value'] = inv_value
-        return res
 
     def action_view_quant_history(self, cr, uid, ids, context=None):
         '''
