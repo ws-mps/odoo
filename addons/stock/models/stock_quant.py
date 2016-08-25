@@ -56,7 +56,7 @@ class Quant(models.Model):
         index=True, readonly=True, required=True,
         default=lambda self: self.env['res.company']._company_default_get('stock.quant'),
         help="The company to which the quants belong")
-    inventory_value = fields.Float('Inventory Value', compute='_compute_inventory_value', readonly=True)
+    inventory_value = fields.Float('Inventory Value', compute='_compute_inventory_value', readonly=True, store=True)
     # Used for negative quants to reconcile after compensated by a new positive one
     propagated_from_id = fields.Many2one(
         'stock.quant', 'Linked Quant',
@@ -77,6 +77,7 @@ class Quant(models.Model):
         self.name = '%s: %s%s' % (self.lot_id.name or self.product_id.code or '', self.qty, self.product_id.uom_id.name)
 
     @api.multi
+    @api.depends('company_id', 'product_id.standard_price')
     def _compute_inventory_value(self):
         for quant in self:
             if quant.company_id != self.env.user.company_id:
@@ -97,22 +98,6 @@ class Quant(models.Model):
         if not self.env.context.get('force_unlink'):
             raise UserError(_('Under no circumstances should you delete or change quants yourselves!'))
         return super(Quant, self).unlink()
-
-    @api.model
-    def read_group(self, domain, fields, groupby, offset=0, limit=None, orderby=False, lazy=True):
-        " Overwrite the read_group in order to sum the function field 'inventory_value' in group by "
-        # TDE NOTE: WHAAAAT ??? is this because inventory_value is not stored ?
-        # TDE FIXME: why not storing the inventory_value field ? company_id is required, stored, and should not create issues
-        res = super(Quant, self).read_group(domain, fields, groupby, offset=offset, limit=limit, orderby=orderby, lazy=lazy)
-        if 'inventory_value' in fields:
-            for line in res:
-                if '__domain' in line:
-                    lines = self.search(line['__domain'])
-                    inv_value = 0.0
-                    for line2 in lines:
-                        inv_value += line2.inventory_value
-                    line['inventory_value'] = inv_value
-        return res
 
     @api.multi
     def action_view_quant_history(self):
