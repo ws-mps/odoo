@@ -109,7 +109,7 @@ class Property(models.Model):
             if not self.value_reference:
                 return False
             model, resource_id = self.value_reference.split(',')
-            return self.env[model].browse(int(resource_id)).exists()
+            return self.env[model].browse(int(resource_id))
         elif self.type == 'datetime':
             return self.value_datetime
         elif self.type == 'date':
