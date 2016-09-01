@@ -1024,7 +1024,7 @@ class IrModelData(models.Model):
 
         if res_model and res_id:
             record = self.env[res_model].browse(res_id)
-            if record.exists():
+            if record:
                 return record
             if raise_if_not_found:
                 raise ValueError('No record found for unique ID %s. It may have been deleted.' % (xmlid))
