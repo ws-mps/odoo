@@ -156,6 +156,7 @@ class res_company(osv.osv):
         return super(res_company, self).name_search(cr, uid, name=name, args=args, operator=operator, context=context, limit=limit)
 
     @api.returns('self')
+    @tools.ormcache('uid')
     def _company_default_get(self, cr, uid, object=False, field=False, context=None):
         """
         Returns the default company (the user's company)
