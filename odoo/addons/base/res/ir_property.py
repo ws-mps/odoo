@@ -119,6 +119,7 @@ class Property(models.Model):
         return False
 
     @api.model
+    @tools.ormcache_context('name', 'model', 'res_id', keys=('force_company',))
     def get(self, name, model, res_id=False):
         domain = self._get_domain(name, model)
         if domain is not None:
