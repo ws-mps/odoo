@@ -274,6 +274,7 @@ class Company(models.Model):
 
     @api.model
     @api.returns('self', lambda value: value.id)
+    @tools.ormcache()
     def _company_default_get(self, object=False, field=False):
         """ Returns the default company (usually the user's company).
         The 'object' and 'field' arguments are ignored but left here for
