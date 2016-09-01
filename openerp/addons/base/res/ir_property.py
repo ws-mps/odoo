@@ -4,7 +4,7 @@
 from operator import itemgetter
 import time
 
-from openerp import models, api
+from openerp import models, api, tools
 from openerp.osv import osv, orm, fields
 from openerp.tools.misc import attrgetter
 from openerp.exceptions import UserError
@@ -140,19 +140,27 @@ class ir_property(osv.osv):
             return self.get_by_record(cr, uid, record, context=context)
         return False
 
+    @api.model
+    @tools.ormcache('name', 'model')
+    def _get_fields_id(self, name, model):
+        self._cr.execute("SELECT id FROM ir_model_fields WHERE name=%s AND model=%s", (name, model))
+        res = self._cr.fetchone()
+        if not res:
+            return None
+        return res[0]
+
     def _get_domain(self, cr, uid, prop_name, model, context=None):
         context = context or {}
-        cr.execute('select id from ir_model_fields where name=%s and model=%s', (prop_name, model))
-        res = cr.fetchone()
-        if not res:
+        fields_id = self._get_fields_id(cr, uid, prop_name, model)
+        if not fields_id:
             return None
 
         cid = context.get('force_company')
         if not cid:
             company = self.pool.get('res.company')
-            cid = company._company_default_get(cr, uid, model, res[0], context=context)
+            cid = company._company_default_get(cr, uid, model, fields_id, context=context)
 
-        return [('fields_id', '=', res[0]), ('company_id', 'in', [cid, False])]
+        return [('fields_id', '=', fields_id), ('company_id', 'in', [cid, False])]
 
     @api.model
     def get_multi(self, name, model, ids):
@@ -207,8 +215,7 @@ class ir_property(osv.osv):
         default_value = clean(self.get(name, model))
 
         # retrieve the properties corresponding to the given record ids
-        self._cr.execute("SELECT id FROM ir_model_fields WHERE name=%s AND model=%s", (name, model))
-        field_id = self._cr.fetchone()[0]
+        field_id = self._get_fields_id(name, model)
         company_id = self.env.context.get('force_company') or self.env['res.company']._company_default_get(model, field_id).id
         refs = {('%s,%s' % (model, id)): id for id in values}
         props = self.search([
