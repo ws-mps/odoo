@@ -120,7 +120,7 @@ class ir_property(osv.osv):
                 return False
             model, resource_id = record.value_reference.split(',')
             value = self.pool[model].browse(cr, uid, int(resource_id), context=context)
-            return value.exists()
+            return value
         elif record.type == 'datetime':
             return record.value_datetime
         elif record.type == 'date':
