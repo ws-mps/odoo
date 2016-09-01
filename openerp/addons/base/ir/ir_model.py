@@ -1000,7 +1000,7 @@ class ir_model_data(osv.osv):
 
         if res_model and res_id:
             record = self.pool[res_model].browse(cr, uid, res_id, context=context)
-            if record.exists():
+            if record:
                 return record
             if raise_if_not_found:
                 raise ValueError('No record found for unique ID %s. It may have been deleted.' % (xmlid))
