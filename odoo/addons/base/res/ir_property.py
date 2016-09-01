@@ -3,7 +3,7 @@
 
 from operator import itemgetter
 
-from odoo import api, fields, models, _
+from odoo import api, fields, models, tools, _
 from odoo.exceptions import UserError
 
 TYPE2FIELD = {
@@ -129,13 +129,21 @@ class Property(models.Model):
                 return prop.get_by_record()
         return False
 
-    def _get_domain(self, prop_name, model):
-        self._cr.execute("SELECT id FROM ir_model_fields WHERE name=%s AND model=%s", (prop_name, model))
+    @api.model
+    @tools.ormcache('name', 'model')
+    def _get_fields_id(self, name, model):
+        self._cr.execute("SELECT id FROM ir_model_fields WHERE name=%s AND model=%s", (name, model))
         res = self._cr.fetchone()
         if not res:
             return None
-        company_id = self._context.get('force_company') or self.env['res.company']._company_default_get(model, res[0]).id
-        return [('fields_id', '=', res[0]), ('company_id', 'in', [company_id, False])]
+        return res[0]
+
+    def _get_domain(self, prop_name, model):
+        fields_id = self._get_fields_id(prop_name, model)
+        if not fields_id:
+            return None
+        company_id = self._context.get('force_company') or self.env['res.company']._company_default_get(model, fields_id).id
+        return [('fields_id', '=', fields_id), ('company_id', 'in', [company_id, False])]
 
     @api.model
     def get_multi(self, name, model, ids):
@@ -196,8 +204,7 @@ class Property(models.Model):
             default_value = clean(self.get(name, model))
 
         # retrieve the properties corresponding to the given record ids
-        self._cr.execute("SELECT id FROM ir_model_fields WHERE name=%s AND model=%s", (name, model))
-        field_id = self._cr.fetchone()[0]
+        field_id = self._get_fields_id(name, model)
         company_id = self.env.context.get('force_company') or self.env['res.company']._company_default_get(model, field_id).id
         refs = {('%s,%s' % (model, id)): id for id in values}
         props = self.search([
