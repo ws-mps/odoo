@@ -656,6 +656,8 @@ class BaseModel(object):
             ]
             if not isinstance(column, fields.function):
                 continue
+            if isinstance(column, fields.property):
+                continue
             if not column.store:
                 # register it on the pool for invalidation
                 pool._pure_function_fields[cls._name].append(fname)
