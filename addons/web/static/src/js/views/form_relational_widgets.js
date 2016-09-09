@@ -711,7 +711,6 @@ var AbstractManyField = common.AbstractField.extend({
 });
 
 var FieldX2Many = AbstractManyField.extend({
-    multi_selection: false,
     disable_utility_classes: true,
     x2many_views: {},
     view_options: {},
@@ -768,7 +767,7 @@ var FieldX2Many = AbstractManyField.extend({
                 _.extend(view.options, {
                     action_buttons: false, // to avoid 'Save' and 'Discard' buttons to appear in X2M fields
                     addable: null,
-                    selectable: self.multi_selection,
+                    selectable: self.options.multi_selection,
                     sortable: true,
                     import_enabled: false,
                     deletable: true
