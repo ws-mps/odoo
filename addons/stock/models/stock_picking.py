@@ -529,6 +529,7 @@ class Picking(models.Model):
                 'location_dest_id': computed_putaway_locations[pack_quants[0].product_id],
                 'owner_id': pack.owner_id.id,
             })
+            print "location id %s" % pack.location_id
             valid_quants -= pack_quants
 
         # Go through all remaining reserved quants and group by product, package, owner, source location and dest location
@@ -550,6 +551,7 @@ class Picking(models.Model):
             qtys_grouped.setdefault(key, 0.0)
             qtys_grouped[key] += qty
 
+        # Do the same for the forced quantities (in cases of force_assign or incomming shipment for example)
         # Create the necessary operations for the grouped quants and remaining qtys
         Uom = self.env['product.uom']
         product_id_to_vals = {}  # use it to create operations using the same order as the picking stock moves
@@ -602,7 +604,9 @@ class Picking(models.Model):
                         forced_qties[move.product_id] = forced_qty
             for vals in picking._prepare_pack_ops(picking_quants, forced_qties):
                 vals['fresh_record'] = False
+                print "hello world"
                 PackOperation.create(vals)
+                print "bye bye world"
         # recompute the remaining quantities all at once
         self.do_recompute_remaining_quantities()
         self.write({'recompute_pack_op': False})

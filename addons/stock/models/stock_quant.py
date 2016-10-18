@@ -506,7 +506,9 @@ class Quant(models.Model):
                     all_in = False
                 if all_in:
                     destinations = [product_to_location[product] for product in package.get_content().mapped('product_id')]
-                    if len(destinations) > 1:
+                    #ws-mps
+                    #if len(destinations) > 1:
+                    if len(set(destinations)) > 1:
                         all_in = False
                 if all_in:
                     top_package = package
@@ -593,9 +595,17 @@ class QuantPackage(models.Model):
     @api.depends('quant_ids.package_id', 'quant_ids.location_id', 'quant_ids.company_id', 'quant_ids.owner_id', 'ancestor_ids')
     def _compute_package_info(self):
         res = {}
-        quants = self.env['stock.quant'].search([('package_id', 'in', self.ids)])  # TDE FIXME: was child_od
+        #ws-mps
+        #quants = self.env['stock.quant'].search([('package_id', 'in', self.ids)])  # TDE FIXME: was child_od
+        quants = self.env['stock.quant'].search([('package_id', 'child_of', self.ids)])
         for quant in quants:
-            res[quant.package_id.id] = {'location_id': quant.location_id.id, 'owner_id': quant.owner_id.id, 'company_id': quant.company_id.id}
+            #ws-mps
+            #res[quant.package_id.id] = {'location_id': quant.location_id.id, 'owner_id': quant.owner_id.id, 'company_id': quant.company_id.id}
+            package = quant.package_id
+            while package.parent_id:
+                package = package.parent_id
+            res[package.id] = {'location_id': quant.location_id.id, 'owner_id': quant.owner_id.id, 'company_id': quant.company_id.id}
+            
         for package in self:
             values = res.get(package.id, {'location_id': False, 'company_id': self.env.user.company_id.id, 'owner_id': False})
             package.location_id = values['location_id']
