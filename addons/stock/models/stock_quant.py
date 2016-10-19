@@ -506,7 +506,7 @@ class Quant(models.Model):
                     all_in = False
                 if all_in:
                     destinations = [product_to_location[product] for product in package.get_content().mapped('product_id')]
-                    if len(destinations) > 1:
+                    if len(set(destinations)) > 1:
                         all_in = False
                 if all_in:
                     top_package = package
