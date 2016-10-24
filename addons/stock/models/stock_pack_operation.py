@@ -251,6 +251,7 @@ class PackOperation(models.Model):
                         'qty_todo': new_qty_todo,
                         'qty': 0,
                     })
+                    lot.write({'qty_todo': lot.qty})
 
 
 class PackOperationLot(models.Model):
