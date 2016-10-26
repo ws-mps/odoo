@@ -580,7 +580,6 @@ class QuantPackage(models.Model):
     def _compute_ancestor_ids(self):
         self.ancestor_ids = self.env['stock.quant.package'].search([('id', 'parent_of', self.id)]).ids
 
-    @api.one
     @api.depends('parent_id', 'children_ids', 'quant_ids.package_id')
     def _compute_children_quant_ids(self):
         res = dict.fromkeys(self.ids, self.env['stock.quant'])
