@@ -432,7 +432,24 @@ return Widget.extend({
                         return field;
                     }
                 });
-                self.groupable_fields = _.sortBy(filter_group_field, 'string');
+                var date_group_funcs = ['hour', 'day', 'week', 'month', 'year'];
+                self.groupable_fields = _.chain(filter_group_field)
+                    .map(function(field) {
+                        if (field.type == 'date' || field.type == 'datetime') {
+                            return date_group_funcs.map(function(group_func) {
+                                var field_clone = _.clone(field);
+                                field_clone.name = field_clone.name + ':' + group_func;
+                                field_clone.string = field_clone.string + ' (' + group_func + ')';
+                                return field_clone;
+                            });
+                        } else {
+                            return field;
+                        }
+
+                    })
+                    .flatten()
+                    .sortBy('string')
+                    .value();
 
                 self.$menu.append(QWeb.render('GroupByMenuSelector', self));
                 self.$add_group_menu = self.$('.o_add_group');
