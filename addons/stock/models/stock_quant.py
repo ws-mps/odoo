@@ -582,12 +582,8 @@ class QuantPackage(models.Model):
 
     @api.depends('parent_id', 'children_ids', 'quant_ids.package_id')
     def _compute_children_quant_ids(self):
-        res = dict.fromkeys(self.ids, self.env['stock.quant'])
-        children_quants = self.env['stock.quant'].search([('package_id', 'child_of', self.ids)])
-        for quant in children_quants:
-            res[quant.package_id.id] |= quant
         for package in self:
-            package.children_quant_ids = res[package.id].ids
+            package.children_quant_ids = self.env['stock.quant'].search([('package_id', 'child_of', package.id)])
 
     @api.depends('quant_ids.package_id', 'quant_ids.location_id', 'quant_ids.company_id', 'quant_ids.owner_id', 'ancestor_ids')
     def _compute_package_info(self):
