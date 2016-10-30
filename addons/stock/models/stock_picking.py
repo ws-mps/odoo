@@ -560,6 +560,7 @@ class Picking(models.Model):
                 'product_qty': mapping.product.uom_id._compute_quantity(qty, uom),
                 'product_id': mapping.product.id,
                 'package_id': mapping.package.id,
+                'result_package_id': mapping.package.id,
                 'owner_id': mapping.owner.id,
                 'location_id': mapping.location.id,
                 'location_dest_id': mapping.location_dst_id,
