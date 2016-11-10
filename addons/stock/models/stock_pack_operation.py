@@ -251,7 +251,10 @@ class PackOperation(models.Model):
                         'qty_todo': new_qty_todo,
                         'qty': 0,
                     })
-                    lot.write({'qty_todo': lot.qty})
+                    if lot.qty > 0:
+                        lot.write({'qty_todo': lot.qty})
+                    else:
+                        lot.unlink()
 
 
 class PackOperationLot(models.Model):
