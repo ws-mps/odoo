@@ -707,7 +707,7 @@ class Picking(models.Model):
                 product_qty = ops.qty_done if done_qtys else ops.product_qty
                 qty_to_assign = ops.product_uom_id._compute_quantity(product_qty, ops.product_id.uom_id)
                 precision_rounding = ops.product_id.uom_id.rounding
-                for move_dict in prod2move_ids.get(ops.product_id.id, []):
+                for move_dict in list(prod2move_ids.get(ops.product_id.id, [])):
                     move = move_dict['move']
                     for quant in move.reserved_quant_ids:
                         if float_compare(qty_to_assign, 0, precision_rounding=precision_rounding) != 1:
@@ -717,7 +717,7 @@ class Picking(models.Model):
 
                         # check if the quant is matching the operation details
                         if ops.package_id:
-                            flag = quant.package_id and bool(QuantPackage.search([('id', 'child_of', [ops.package_id.id])])) or False
+                            flag = quant.package_id and (quant.package_id in QuantPackage.search([('id', 'child_of', [ops.package_id.id])])) or False
                         else:
                             flag = not quant.package_id.id
                         flag = flag and (ops.owner_id.id == quant.owner_id.id)
