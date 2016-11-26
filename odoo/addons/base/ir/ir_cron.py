@@ -57,6 +57,7 @@ class ir_cron(models.Model):
     doall = fields.Boolean(string='Repeat Missed', help="Specify if missed occurrences should be executed when the server restarts.")
     nextcall = fields.Datetime(string='Next Execution Date', required=True, default=fields.Datetime.now, help="Next planned execution date for this job.")
     model = fields.Char(string='Object', help="Model name on which the method to be called is located, e.g. 'res.partner'.")
+    res_id = fields.Integer(string='Record ID', help="ID of the target record in the database")
     function = fields.Char(string='Method', help="Name of the method to be called when this job is processed.")
     args = fields.Text(string='Arguments', help="Arguments to be passed to the method, e.g. (uid,).")
     priority = fields.Integer(default=5, help='The priority of the job, as an integer: 0 means higher priority, 10 means lower priority.')
@@ -72,11 +73,11 @@ class ir_cron(models.Model):
     @api.multi
     def method_direct_trigger(self):
         for cron in self:
-            self.sudo(user=cron.user_id.id)._callback(cron.model, cron.function, cron.args, cron.id)
+            self.sudo(user=cron.user_id.id)._callback(cron.model, cron.res_id, cron.function, cron.args, cron.id)
         return True
 
     @api.model
-    def _handle_callback_exception(self, model_name, method_name, args, job_id, job_exception):
+    def _handle_callback_exception(self, model_name, res_id, method_name, args, job_id, job_exception):
         """ Method called when an exception is raised by a job.
 
         Simply logs the exception and rollback the transaction.
@@ -89,11 +90,11 @@ class ir_cron(models.Model):
 
         """
         self._cr.rollback()
-        _logger.exception("Call of self.env[%r].%s(*%r) failed in Job %s",
-                          model_name, method_name, args, job_id)
+        _logger.exception("Call of self.env[%r].browse(%s).%s(*%r) failed in Job %s",
+                          model_name, (res_id or ''), method_name, args, job_id)
 
     @api.model
-    def _callback(self, model_name, method_name, args, job_id):
+    def _callback(self, model_name, res_id, method_name, args, job_id):
         """ Run the method associated to a given job
 
         It takes care of logging and exception handling.
@@ -116,7 +117,7 @@ class ir_cron(models.Model):
                     odoo.netsvc.log(_logger, logging.DEBUG, 'cron.object.execute', (self._cr.dbname, self._uid, '*', model_name, method_name)+tuple(args), depth=log_depth)
                     if _logger.isEnabledFor(logging.DEBUG):
                         start_time = time.time()
-                    getattr(model, method_name)(*args)
+                    getattr(model.browse(res_id or ()), method_name)(*args)
                     if _logger.isEnabledFor(logging.DEBUG):
                         end_time = time.time()
                         _logger.debug('%.3fs (%s, %s)', end_time - start_time, model_name, method_name)
@@ -126,7 +127,7 @@ class ir_cron(models.Model):
             else:
                 _logger.warning("Model %r does not exist.", model_name)
         except Exception, e:
-            self._handle_callback_exception(model_name, method_name, args, job_id, e)
+            self._handle_callback_exception(model_name, res_id, method_name, args, job_id, e)
 
     @classmethod
     def _process_job(cls, job_cr, job, cron_cr):
@@ -153,7 +154,7 @@ class ir_cron(models.Model):
                     if numbercall > 0:
                         numbercall -= 1
                     if not ok or job['doall']:
-                        cron._callback(job['model'], job['function'], job['args'], job['id'])
+                        cron._callback(job['model'], job['res_id'], job['function'], job['args'], job['id'])
                     if numbercall:
                         nextcall += _intervalTypes[job['interval_type']](job['interval_number'])
                     ok = True

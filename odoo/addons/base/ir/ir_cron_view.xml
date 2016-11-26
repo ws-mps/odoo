@@ -29,6 +29,7 @@
                     <page string="Technical Data" groups="base.group_no_one">
                         <group string="Action to Trigger">
                             <field name="model"/>
+                            <field name="res_id"/>
                             <field name="function"/>
                         </group>
                         <label for="args"/>
