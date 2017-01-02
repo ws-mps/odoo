@@ -2,7 +2,7 @@
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 import logging
 import pyPdf
-import xml.dom.minidom
+from lxml import etree
 import zipfile
 
 from StringIO import StringIO
@@ -25,15 +25,6 @@ def toUnicode(s):
             except UnicodeError:
                 return s
 
-def textToString(element):
-    buff = u""
-    for node in element.childNodes:
-        if node.nodeType == xml.dom.Node.TEXT_NODE:
-            buff += node.nodeValue
-        elif node.nodeType == xml.dom.Node.ELEMENT_NODE:
-            buff += textToString(node)
-    return buff
-
 
 class IrAttachment(models.Model):
     _inherit = 'ir.attachment'
@@ -42,13 +33,14 @@ class IrAttachment(models.Model):
         '''Index Microsoft .docx documents'''
         buf = u""
         f = StringIO(bin_data)
+        ns = {'w': 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'}
         if zipfile.is_zipfile(f):
             try:
                 zf = zipfile.ZipFile(f)
-                content = xml.dom.minidom.parseString(zf.read("word/document.xml"))
-                for val in ["w:p", "w:h", "text:list"]:
-                    for element in content.getElementsByTagName(val):
-                        buf += textToString(element) + "\n"
+                content = etree.fromstring(zf.read('word/document.xml'))
+                buf = u'\n'.join(u''.join(element.itertext())
+                                 for val in ['.//w:p', './/w:h']
+                                 for element in content.iterfind(val, namespaces=ns))
             except Exception:
                 pass
         return buf
@@ -58,15 +50,16 @@ class IrAttachment(models.Model):
 
         buf = u""
         f = StringIO(bin_data)
+        ns = {'a': 'http://schemas.openxmlformats.org/drawingml/2006/main'}
         if zipfile.is_zipfile(f):
             try:
                 zf = zipfile.ZipFile(f)
                 zf_filelist = [x for x in zf.namelist() if x.startswith('ppt/slides/slide')]
                 for i in range(1, len(zf_filelist) + 1):
-                    content = xml.dom.minidom.parseString(zf.read('ppt/slides/slide%s.xml' % i))
-                    for val in ["a:t"]:
-                        for element in content.getElementsByTagName(val):
-                            buf += textToString(element) + "\n"
+                    content = etree.fromstring(zf.read('ppt/slides/slide%s.xml' % i))
+                    buf = u'\n'.join(u''.join(element.itertext())
+                                     for val in ['.//a:t']
+                                     for element in content.iterfind(val, namespaces=ns))
             except Exception:
                 pass
         return buf
@@ -76,13 +69,14 @@ class IrAttachment(models.Model):
 
         buf = u""
         f = StringIO(bin_data)
+        ns = {'s': 'http://schemas.openxmlformats.org/spreadsheetml/2006/main'}
         if zipfile.is_zipfile(f):
             try:
                 zf = zipfile.ZipFile(f)
-                content = xml.dom.minidom.parseString(zf.read("xl/sharedStrings.xml"))
-                for val in ["t"]:
-                    for element in content.getElementsByTagName(val):
-                        buf += textToString(element) + "\n"
+                content = etree.fromstring(zf.read('xl/sharedStrings.xml'))
+                buf = u'\n'.join(u''.join(element.itertext())
+                                 for val in ['.//s:t']
+                                 for element in content.iterfind(val, namespaces=ns))
             except Exception:
                 pass
         return buf
@@ -92,13 +86,14 @@ class IrAttachment(models.Model):
 
         buf = u""
         f = StringIO(bin_data)
+        ns = {'text': 'urn:oasis:names:tc:opendocument:xmlns:text:1.0'}
         if zipfile.is_zipfile(f):
             try:
                 zf = zipfile.ZipFile(f)
-                content = xml.dom.minidom.parseString(zf.read("content.xml"))
-                for val in ["text:p", "text:h", "text:list"]:
-                    for element in content.getElementsByTagName(val):
-                        buf += textToString(element) + "\n"
+                content = etree.fromstring(zf.read('content.xml'))
+                buf = u'\n'.join(u''.join(element.itertext())
+                                 for val in ['.//text:p', './/text:h', './/text:list']
+                                 for element in content.iterfind(val, namespaces=ns))
             except Exception:
                 pass
         return buf
