@@ -687,7 +687,9 @@ class Picking(models.Model):
         for ops in operations:
             lot_qty = {}
             for packlot in ops.pack_lot_ids:
-                lot_qty[packlot.lot_id.id] = ops.product_uom_id._compute_quantity(packlot.qty, ops.product_id.uom_id)
+                qty = packlot.qty if done_qtys else packlot.qty_todo
+                lot_qty[packlot.lot_id.id] = ops.product_uom_id._compute_quantity(qty, ops.product_id.uom_id)
+
             # for each operation, create the links with the stock move by seeking on the matching reserved quants,
             # and deffer the operation if there is some ambiguity on the move to select
             if ops.package_id and not ops.product_id and (not done_qtys or ops.qty_done):
